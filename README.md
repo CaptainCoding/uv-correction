@@ -2,7 +2,7 @@
 
 UV Correction is a lightweight GUI tool for inspecting and correcting UV coordinates in USD meshes.
 
-The app is built with `matplotlib` widgets (no `tkinter` UI layer) and lets you:
+The app is built with `matplotlib` widgets and lets you:
 
 - load a USD file and inspect UV points per mesh
 - overlay an optional texture image
