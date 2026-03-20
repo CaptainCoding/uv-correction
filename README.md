@@ -31,12 +31,6 @@ Run via module script file:
 uv run uv_correction.py /path/to/file.usd --texture /path/to/texture.jpg
 ```
 
-Or run via project entry point:
-
-```bash
-uv run uv-correction /path/to/file.usd --texture /path/to/texture.jpg
-```
-
 Accepted texture flags:
 
 - `--texture`
@@ -48,12 +42,13 @@ Accepted texture flags:
 - `Meshes`: checkbox list for mesh selection
 - `Scale U`, `Scale V`, `Offset U`, `Offset V`: sliders for interactive tuning
 - numeric boxes next to sliders: exact value input
-- `Auf Auswahl anwenden`: permanently apply current transform to selected meshes
-- `Auf ALLE anwenden`: apply transform to all meshes
-- `Zuruecksetzen`: reset selected meshes to original UVs and reset controls
+- `Apply to Selection`: permanently apply current transform to selected meshes
+- `Apply to ALL`: apply transform to all meshes
+- `Reset`: reset selected meshes to original UVs and reset controls
 - `Texture X Flip`, `Texture Y Flip`: toggle texture preview orientation
-- `Exportieren`: writes a corrected file next to the source as:
-	- `<original_name>_corrected.usda`
+- `Export`: writes a corrected file next to the source as `<original_name>_corrected.usda`
+- `Zoom +`, `Zoom -`, `View Reset`: zoom controls for the UV viewport
+- mouse pan: right-click and drag inside the UV plot
 
 ## Notes
 

@@ -65,13 +65,13 @@ class UVCorrectionApp:
     def __init__(self, usd_path: str, texture_path: str | None = None) -> None:
         self.stage = Usd.Stage.Open(usd_path)
         if self.stage is None:
-            print(f"Fehler: Konnte USD-Datei nicht öffnen: {usd_path}", file=sys.stderr)
+            print(f"Error: Could not open USD file: {usd_path}", file=sys.stderr)
             sys.exit(1)
 
         self.usd_path = Path(usd_path)
         self.mesh_paths = list_mesh_prim_paths(self.stage)
         if not self.mesh_paths:
-            print("Keine Meshes in der USD-Datei gefunden.", file=sys.stderr)
+            print("No meshes found in the USD file.", file=sys.stderr)
             sys.exit(1)
 
         # Store original UVs and modified UVs
@@ -89,13 +89,15 @@ class UVCorrectionApp:
             try:
                 self.texture_image = plt.imread(texture_path)
             except Exception as e:
-                print(f"Warnung: Konnte Textur nicht laden: {e}", file=sys.stderr)
+                print(f"Warning: Could not load texture: {e}", file=sys.stderr)
 
         # Selected meshes (all selected by default)
         self.selected: dict[str, bool] = {mp: True for mp in self.mesh_paths}
         self.live_preview = True
         self.view_xlim: tuple[float, float] | None = None
         self.view_ylim: tuple[float, float] | None = None
+        self.is_panning = False
+        self.pan_start: tuple[float, float, tuple[float, float], tuple[float, float]] | None = None
 
         # Keep checkbox labels short to avoid text overflow.
         self.mesh_label_to_path: dict[str, str] = {}
@@ -181,10 +183,10 @@ class UVCorrectionApp:
         ax_zoom_out = self.fig.add_axes([0.81, 0.95, 0.07, 0.035])
         ax_view_reset = self.fig.add_axes([0.89, 0.95, 0.08, 0.035])
 
-        self.btn_apply = Button(ax_apply, "Auf Auswahl anwenden")
-        self.btn_apply_all = Button(ax_apply_all, "Auf ALLE anwenden")
-        self.btn_reset = Button(ax_reset, "Zurücksetzen")
-        self.btn_export = Button(ax_export, "Exportieren")
+        self.btn_apply = Button(ax_apply, "Apply to Selection")
+        self.btn_apply_all = Button(ax_apply_all, "Apply to ALL")
+        self.btn_reset = Button(ax_reset, "Reset")
+        self.btn_export = Button(ax_export, "Export")
         self.btn_zoom_in = Button(ax_zoom_in, "Zoom +")
         self.btn_zoom_out = Button(ax_zoom_out, "Zoom -")
         self.btn_view_reset = Button(ax_view_reset, "View Reset")
@@ -207,6 +209,11 @@ class UVCorrectionApp:
         for txt in self.check_tex.labels:
             txt.set_fontsize(8)
         self.check_tex.on_clicked(self._on_texture_option)
+
+        # Mouse navigation: right-click and drag to pan the UV view.
+        self.fig.canvas.mpl_connect("button_press_event", self._on_mouse_press)
+        self.fig.canvas.mpl_connect("button_release_event", self._on_mouse_release)
+        self.fig.canvas.mpl_connect("motion_notify_event", self._on_mouse_move)
 
         self._sync_textboxes_from_sliders()
         self._refresh_plot()
@@ -264,6 +271,38 @@ class UVCorrectionApp:
     def _reset_view(self, _event=None) -> None:
         self.view_xlim = None
         self.view_ylim = None
+        self._refresh_plot()
+
+    def _on_mouse_press(self, event) -> None:
+        if event.inaxes != self.ax or event.button != 3:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+
+        if self.view_xlim is None or self.view_ylim is None:
+            self.view_xlim = self.ax.get_xlim()
+            self.view_ylim = self.ax.get_ylim()
+
+        self.is_panning = True
+        self.pan_start = (event.xdata, event.ydata, self.view_xlim, self.view_ylim)
+
+    def _on_mouse_release(self, event) -> None:
+        if event.button == 3:
+            self.is_panning = False
+            self.pan_start = None
+
+    def _on_mouse_move(self, event) -> None:
+        if not self.is_panning or self.pan_start is None:
+            return
+        if event.inaxes != self.ax or event.xdata is None or event.ydata is None:
+            return
+
+        start_x, start_y, start_xlim, start_ylim = self.pan_start
+        dx = event.xdata - start_x
+        dy = event.ydata - start_y
+
+        self.view_xlim = (start_xlim[0] - dx, start_xlim[1] - dx)
+        self.view_ylim = (start_ylim[0] - dy, start_ylim[1] - dy)
         self._refresh_plot()
 
     def _textbox_to_slider(self, text: str, slider: Slider, min_v: float, max_v: float) -> None:
@@ -326,8 +365,8 @@ class UVCorrectionApp:
                 changed += 1
 
         self.stage.Export(str(out))
-        print(f"Exportiert: {out} ({changed} mesh primvars geschrieben)")
-        self.ax.set_title(f"Exportiert: {out.name}", fontsize=10, color="green")
+        print(f"Exported: {out} ({changed} mesh primvars written)")
+        self.ax.set_title(f"Exported: {out.name}", fontsize=10, color="green")
         self.fig.canvas.draw_idle()
 
     def _values_for_display(self, mesh_path: str):
@@ -377,7 +416,7 @@ class UVCorrectionApp:
 
         self.ax.set_xlabel("U")
         self.ax.set_ylabel("V")
-        self.ax.set_title("UV-Koordinaten")
+        self.ax.set_title("UV Coordinates")
         self.ax.grid(True, alpha=0.3)
         if self.view_xlim is not None and self.view_ylim is not None:
             self.ax.set_xlim(*self.view_xlim)
@@ -396,15 +435,15 @@ class UVCorrectionApp:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="UV Correction Tool – UV-Koordinaten in USD-Dateien korrigieren",
+        description="UV Correction Tool - Correct UV coordinates in USD files",
     )
-    parser.add_argument("usd_file", help="Pfad zur USD-Datei")
+    parser.add_argument("usd_file", help="Path to the USD file")
     parser.add_argument(
         "--texture",
         "-t",
         "-texture",
         dest="texture",
-        help="Pfad zur Textur-Datei",
+        help="Path to the texture image file",
     )
     args = parser.parse_args()
 
