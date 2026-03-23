@@ -145,8 +145,8 @@ class UVCorrectionApp:
         ax_ou = self.fig.add_axes([0.70, 0.06, 0.25, 0.03])
         ax_ov = self.fig.add_axes([0.70, 0.02, 0.25, 0.03])
 
-        self.sl_su = Slider(ax_su, "Scale U", 0.01, 5.0, valinit=1.0)
-        self.sl_sv = Slider(ax_sv, "Scale V", 0.01, 5.0, valinit=1.0)
+        self.sl_su = Slider(ax_su, "Scale U", 0.01, 100.0, valinit=1.0)
+        self.sl_sv = Slider(ax_sv, "Scale V", 0.01, 100.0, valinit=1.0)
         self.sl_ou = Slider(ax_ou, "Offset U", -2.0, 2.0, valinit=0.0)
         self.sl_ov = Slider(ax_ov, "Offset V", -2.0, 2.0, valinit=0.0)
 
@@ -161,8 +161,8 @@ class UVCorrectionApp:
         self.tb_ou = TextBox(ax_tou, "", initial="0.0")
         self.tb_ov = TextBox(ax_tov, "", initial="0.0")
 
-        self.tb_su.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_su, 0.01, 5.0))
-        self.tb_sv.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_sv, 0.01, 5.0))
+        self.tb_su.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_su, 0.01, 100.0))
+        self.tb_sv.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_sv, 0.01, 100.0))
         self.tb_ou.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_ou, -2.0, 2.0))
         self.tb_ov.on_submit(lambda txt: self._textbox_to_slider(txt, self.sl_ov, -2.0, 2.0))
 
